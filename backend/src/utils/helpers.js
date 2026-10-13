@@ -20,6 +20,7 @@ const sendTokenResponse = (user, statusCode, res) => {
     .cookie('token', token, options)
     .json({
       success: true,
+      token,
       data: user
     });
 };

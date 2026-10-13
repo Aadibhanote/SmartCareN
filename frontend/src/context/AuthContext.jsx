@@ -30,6 +30,9 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     try {
       const res = await authAPI.login(data);
+      if (res.data.token) {
+        localStorage.setItem('token', res.data.token);
+      }
       setUser(res.data.data);
       toast.success('Logged in successfully');
       return true;
@@ -46,6 +49,9 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     try {
       const res = await authAPI.register(data);
+      if (res.data.token) {
+        localStorage.setItem('token', res.data.token);
+      }
       setUser(res.data.data);
       toast.success('Registered successfully');
       return true;
@@ -64,6 +70,7 @@ export const AuthProvider = ({ children }) => {
     } catch (err) {
       console.error('Logout API error:', err);
     } finally {
+      localStorage.removeItem('token');
       setUser(null);
       window.location.href = '/login';
     }
