@@ -23,38 +23,44 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // CORS — support localhost dev + exact Vercel origin(s)
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:3000',
-];
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true;
+  if (origin === 'http://localhost:5173' || origin === 'http://localhost:3000') return true;
+  if (origin.endsWith('.vercel.app')) return true;
+  if (process.env.FRONTEND_URL) {
+    const urls = process.env.FRONTEND_URL.split(',').map(u => u.trim().replace(/\/$/, ''));
+    if (urls.includes(origin)) return true;
+  }
+  return false;
+};
 
-// Add production frontend URL if set
-if (process.env.FRONTEND_URL) {
-  process.env.FRONTEND_URL.split(',').forEach(url => {
-    const trimmed = url.trim();
-    if (trimmed) allowedOrigins.push(trimmed);
-  });
-}
-
-app.use(cors({
+const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, curl, Render health checks)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.some(allowed => origin === allowed || origin.endsWith('.vercel.app'))) {
-      return callback(null, true);
+    if (isAllowedOrigin(origin)) {
+      callback(null, true);
+    } else {
+      callback(null, false);
     }
-    return callback(new Error(`CORS: origin ${origin} not allowed`));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}));
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Set-Cookie']
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 app.use(helmet({
   crossOriginResourcePolicy: false,
 }));
 app.use(express.json({ limit: '10kb' }));
 app.use(cookieParser());
+
+// Root endpoint for simple service confirmation
+app.get('/', (req, res) => {
+  res.status(200).json({ message: 'SmartCareN Backend API is running', health: '/api/health' });
+});
 
 // Rate limiting for general API calls
 const apiLimiter = rateLimit({
